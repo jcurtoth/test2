@@ -1,0 +1,44 @@
+.bat @jcurtoth
+.bkp @jcurtoth
+.chm @jcurtoth
+.class @jcurtoth
+.css @jcurtoth
+.db @jcurtoth
+.dll @jcurtoth
+.doc @JanBaserba
+.docx @JanBaserba
+.dtd @JanBaserba
+.ent @jcurtoth
+.exe @jcurtoth
+.gif @jcurtoth @JanBaserba
+.htm @jcurtoth
+.html @jcurtoth
+.jar @jcurtoth
+.java @jcurtoth
+.jpg @JanBaserba
+.js @jcurtoth
+.md @jcurtoth @JanBaserba
+.pdf @JanBaserba
+.png @JanBaserba
+.properties @jcurtoth
+.py @jcurtoth
+.sfx @jcurtoth
+.spp @jcurtoth
+.ttt @jcurtoth
+.txt @JanBaserba
+.vbs @jcurtoth
+.vsd @jcurtoth @JanBaserba
+.xls @JanBaserba
+.xlsm @JanBaserba
+.xlsx @JanBaserba
+.xml @JanBaserba
+.xsd @JanBaserba
+.xsl @jcurtoth
+.xslt @jcurtoth
+.yml @jcurtoth
+.zip @jcurtoth
+
+/scripts/ @jcurtoth
+/extern/ @jcurtoth
+
+/.github/ @jcurtoth

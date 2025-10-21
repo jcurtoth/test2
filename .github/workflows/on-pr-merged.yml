@@ -1,0 +1,100 @@
+# .github/workflows/on-pr-merged.yml
+name: Echo PR info on merge to main
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  echo-pr:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Extract version from PR body
+        id: version
+        shell: bash
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          body="$PR_BODY"
+          version=""
+
+          # "Version:" with optional bold markers around the word and/or after the colon and optional backticks around the value.
+          if [[ "$body" =~ (\*\*)?[Vv]ersion(\*\*)?[[:space:]]*[:：][[:space:]]*(\*\*)?[[:space:]]*[\`]?[[:space:]]*((([Ff][Pp][Mm][Ll])|([Cc][Oo][Dd][Ii][Nn][Gg]))[A-Za-z0-9._-]*)[\`]? ]]; then
+            version="${BASH_REMATCH[4]}"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+
+      - name: Echo PR info
+        env:
+          PR_NUMBER:  ${{ github.event.pull_request.number }}
+          PR_TITLE:   ${{ github.event.pull_request.title }}
+          PR_AUTHOR:  ${{ github.event.pull_request.user.login }}
+          MERGED_BY:  ${{ github.event.pull_request.merged_by.login }}
+          BASE:       ${{ github.event.pull_request.base.ref }}
+          HEAD:       ${{ github.event.pull_request.head.ref }}
+          MERGE_SHA:  ${{ github.event.pull_request.merge_commit_sha }}
+          LABELS:     ${{ join(github.event.pull_request.labels.*.name, ', ') }}
+          PR_BODY:    ${{ github.event.pull_request.body }}
+          VERSION:    ${{ steps.version.outputs.version }}
+        run: |
+          echo "PR #:       $PR_NUMBER"
+          echo "Title:      $PR_TITLE"
+          echo "Author:     $PR_AUTHOR"
+          echo "Merged by:  $MERGED_BY"
+          echo "Base:       $BASE"
+          echo "Head:       $HEAD"
+          echo "Merge SHA:  $MERGE_SHA"
+          echo "Labels:     ${LABELS:-none}"
+          echo "Version:    ${VERSION:-<not found>}"
+
+          echo "::group::PR body"
+          if [ -n "$PR_BODY" ]; then
+            printf "%s\n" "$PR_BODY"
+          else
+            echo "_No description_"
+          fi
+          echo "::endgroup::"
+
+      - name: Create tag if version was found
+        if: ${{ steps.version.outputs.version != '' }}
+        shell: bash
+        env:
+          TAG:  ${{ steps.version.outputs.version }}
+          SHA:  ${{ github.event.pull_request.merge_commit_sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/$REPO"
+          AUTH_HEADER="Authorization: Bearer $GH_TOKEN"
+
+          echo "Attempting to create tag '$TAG' on $SHA"
+
+          # Check if tag already exists
+          status="$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "$AUTH_HEADER" -H 'Accept: application/vnd.github+json' \
+            "$API/git/ref/tags/$TAG")"
+
+          if [ "$status" = "200" ]; then
+            echo "Tag '$TAG' already exists. Skipping creation."
+            exit 0
+          elif [ "$status" != "404" ]; then
+            echo "Could not verify tag existence (HTTP $status)."
+            exit 1
+          fi
+
+          # Create lightweight tag ref
+          curl -s -f -X POST \
+            -H "$AUTH_HEADER" -H 'Accept: application/vnd.github+json' \
+            "$API/git/refs" \
+            -d "{\"ref\":\"refs/tags/$TAG\",\"sha\":\"$SHA\"}" >/dev/null
+
+          echo "Tag '$TAG' created at $SHA."
